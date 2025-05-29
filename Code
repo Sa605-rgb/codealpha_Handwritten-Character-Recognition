@@ -1,0 +1,62 @@
+# Step 1: Install Required Libraries
+!pip install tensorflow matplotlib scikit-learn
+
+# Step 2: Import Libraries
+import numpy as np
+import matplotlib.pyplot as plt
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense
+from tensorflow.keras.utils import to_categorical
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
+import scipy.io
+
+# Step 3: Load the EMNIST dataset
+# You can download from https://www.nist.gov/itl/products-and-services/emnist-dataset
+# For now, we’ll load a sample if you upload it to Colab.
+
+# Assume you upload `emnist-letters.mat` manually
+emnist = scipy.io.loadmat('emnist-letters.mat')
+
+# Extract data
+x = emnist['dataset']['train'][0][0]['images'][0][0]
+y = emnist['dataset']['train'][0][0]['labels'][0][0]
+x = x.reshape((-1, 28, 28), order='F')
+
+# Normalize
+x = x / 255.0
+
+# Expand dims for CNN input
+x = np.expand_dims(x, axis=-1)
+
+# Convert labels to categorical
+y = y.flatten()
+y = y - 1  # Labels start from 1 in EMNIST, make it 0-25
+y = to_categorical(y, num_classes=26)
+
+# Train/test split
+x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2)
+
+# Step 4: Build the CNN Model
+model = Sequential([
+    Conv2D(32, (3,3), activation='relu', input_shape=(28,28,1)),
+    MaxPooling2D((2,2)),
+    Conv2D(64, (3,3), activation='relu'),
+    MaxPooling2D((2,2)),
+    Flatten(),
+    Dense(128, activation='relu'),
+    Dense(26, activation='softmax')
+])
+
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+
+# Step 5: Train the Model
+model.fit(x_train, y_train, epochs=5, validation_data=(x_test, y_test))
+
+# Step 6: Evaluate
+loss, acc = model.evaluate(x_test, y_test)
+print(f"Test Accuracy: {acc * 100:.2f}%")
+
+# Step 7: Save Model
+model.save("handwritten_character_model.h5")
